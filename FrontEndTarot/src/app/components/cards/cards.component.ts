@@ -6,21 +6,20 @@ import {
   trigger,
 } from '@angular/animations';
 import { CommonModule } from '@angular/common';
-import {
-  Component,
-  OnInit,
-} from '@angular/core';
-import {
-  ActivatedRoute,
-  Router,
-} from '@angular/router';
+import { AfterViewInit, Component, OnDestroy, OnInit } from '@angular/core';
+import { ActivatedRoute, Router } from '@angular/router';
 
 import { CardService } from '../../services/card.service';
 import { ParticlesComponent } from '../../shared/particles/particles.component';
+import { gsap } from 'gsap';
+import { Draggable } from 'gsap/Draggable';
+import { MotionPathPlugin } from 'gsap/MotionPathPlugin';
+import { TextPlugin } from 'gsap/TextPlugin';
 
+gsap.registerPlugin(Draggable, MotionPathPlugin, TextPlugin);
 @Component({
   selector: 'app-cards',
-  imports: [ParticlesComponent, CommonModule],
+  imports: [CommonModule, ParticlesComponent],
   templateUrl: './cards.component.html',
   styleUrl: './cards.component.css',
   animations: [
@@ -32,7 +31,7 @@ import { ParticlesComponent } from '../../shared/particles/particles.component';
 })
 /**
  * Maneja la selección de una carta cuando se hace clic en ella.
- * 
+ *
  * Este método realiza las siguientes acciones:
  * 1. Verifica si ya se han seleccionado 3 cartas o si la carta ya está seleccionada.
  * 2. Actualiza el z-index de la carta seleccionada para mostrarla encima.
@@ -42,208 +41,754 @@ import { ParticlesComponent } from '../../shared/particles/particles.component';
  * 6. Cambia la imagen de fondo de la carta seleccionada después de un breve retraso.
  * 7. Si se han seleccionado 3 cartas, ajusta la posición final de las cartas seleccionadas,
  *    guarda las cartas seleccionadas en el servicio y navega a la página de descripción.
- * 
+ *
  * @param {Event} event - El evento de clic que desencadena la selección de la carta.
  */
-export class CardsComponent implements OnInit {
+export class CardsComponent implements OnInit, AfterViewInit, OnDestroy {
   cards: any[] = [];
-  selectedCards: { src: string, name: string, descriptions: string[] }[] = [];
+  selectedCards: { src: string; name: string; descriptions: string[] }[] = [];
   private theme: string = '';
-  constructor(private cardService: CardService,
+  private isAnimating: boolean = false;
+  private isInitialAnimationComplete: boolean = false;
+  private cardElements: HTMLElement[] = [];
+  private timeline: gsap.core.Timeline | null = null;
+
+  // Dimensiones responsive de las cartas
+  private getCardDimensions() {
+    const viewportWidth = window.innerWidth;
+    const viewportHeight = window.innerHeight;
+
+    // Escala basada en el viewport
+    let cardWidth, cardHeight;
+
+    if (viewportWidth <= 480) {
+      // Móviles pequeños
+      cardWidth = Math.min(90, viewportWidth * 0.22);
+      cardHeight = cardWidth * 1.55;
+    } else if (viewportWidth <= 768) {
+      // Tablets y móviles grandes
+      cardWidth = Math.min(110, viewportWidth * 0.14);
+      cardHeight = cardWidth * 1.55;
+    } else if (viewportWidth <= 1366) {
+      // Laptops pequeñas
+      cardWidth = Math.min(140, viewportWidth * 0.1);
+      cardHeight = cardWidth * 1.55;
+    } else {
+      // Pantallas grandes
+      cardWidth = Math.min(150, viewportWidth * 0.08);
+      cardHeight = cardWidth * 1.55;
+    }
+
+    return { width: cardWidth, height: cardHeight };
+  }
+
+  // Dimensiones para los slots (más pequeñas que las cartas del abanico)
+  private getSlotDimensions() {
+    const cardDims = this.getCardDimensions();
+    return {
+      width: cardDims.width * 0.83,
+      height: cardDims.height * 0.88,
+    };
+  }
+
+  // Dimensiones de las cartas cuando están EN los slots
+  private getCardInSlotDimensions() {
+    const slotDims = this.getSlotDimensions();
+    return {
+      width: slotDims.width * 1.13,
+      height: slotDims.height * 1.13,
+    };
+  }
+
+  constructor(
+    private cardService: CardService,
     private router: Router,
-    private route: ActivatedRoute) { }
+    private route: ActivatedRoute
+  ) {}
 
   ngOnInit(): void {
-    // Obtener el tema de la ruta
-    this.route.params.subscribe(params => {
+    this.route.params.subscribe((params) => {
       this.theme = params['theme'];
       this.initializeCards();
     });
   }
-  /* Inicializa las cartas para obtener el tema de la carta 
-    * Y barajarlo según el tema seleccionado
-  */
+
+  private animateHeader(): void {
+    const title = document.querySelector('.main-title');
+    const subtitle = document.querySelector('.subtitle');
+    const counter = document.querySelector('.card-counter');
+
+    if (title) {
+      gsap.from(title, {
+        y: -50,
+        opacity: 0,
+        duration: 1,
+        ease: 'power3.out',
+      });
+    }
+
+    if (subtitle) {
+      gsap.from(subtitle, {
+        y: -30,
+        opacity: 0,
+        duration: 1,
+        delay: 0.2,
+        ease: 'power3.out',
+      });
+    }
+
+    if (counter) {
+      gsap.from(counter, {
+        scale: 0,
+        opacity: 0,
+        duration: 0.8,
+        delay: 0.4,
+        ease: 'back.out(1.7)',
+      });
+    }
+  }
+
   initializeCards(): void {
     this.cardService.clearSelectedCards();
     this.cards = this.cardService.getCardsByTheme(this.theme);
-    this.displayCards();
   }
-  /**
-   * Muestra un conjunto de cartas en una disposición en forma de abanico en la pantalla.
-   * 
-   * Este método obtiene un elemento contenedor con el ID "cardContainer" y 
-   * crea y posiciona dinámicamente elementos de cartas dentro de él. Las cartas se 
-   * organizan en forma de abanico, con cada carta teniendo un ángulo y posición únicos.
-   * 
-   * El método realiza los siguientes pasos:
-   * 1. Verifica si el elemento contenedor de las cartas existe. Si no, registra un error y termina la ejecución.
-   * 2. Verifica si hay cartas para mostrar. Si no, registra una advertencia y termina la ejecución.
-   * 3. Calcula la posición y el ángulo de cada carta.
-   * 4. Crea un elemento de carta para cada carta, establece sus estilos y atributos, y 
-   *    lo añade al contenedor de cartas.
-   * 5. Agrega eventos de entrada, salida y clic del mouse a cada carta.
-   * 6. Anima la opacidad de cada carta para crear un efecto de aparición gradual.
-   * 
-   * @throws {Error} Si no se encuentra el elemento contenedor de las cartas.
-   * @throws {Error} Si no hay cartas para mostrar.
-   */
 
   displayCards(): void {
-    const cardContainer = document.getElementById("cardContainer");
-    if (!cardContainer) {
-      console.error("❌ No se encontró el contenedor de cartas (#cardContainer)");
-      return;
+    const cardContainer = document.getElementById('cardContainer');
+    if (!cardContainer || this.cards.length === 0) return;
+
+    const numberOfCards = Math.min(12, this.cards.length);
+    const viewportWidth = window.innerWidth;
+    const viewportHeight = window.innerHeight;
+
+    // Calcular el centro dinámicamente basado en el viewport
+    const centerX = viewportWidth / 2;
+    // El centro Y se ajusta según el tamaño de la pantalla
+    const centerY = viewportHeight * 0.38; // 50% desde arriba funciona bien para la mayoría
+
+    // Radio adaptativo
+    let radius;
+    if (viewportWidth <= 480) {
+      radius = Math.min(viewportWidth * 0.35, 140);
+    } else if (viewportWidth <= 768) {
+      radius = Math.min(viewportWidth * 0.32, 180);
+    } else if (viewportWidth <= 1366) {
+      radius = Math.min(viewportWidth * 0.18, 220);
+    } else {
+      radius = Math.min(viewportWidth * 0.15, 250);
     }
-  
-    if (this.cards.length === 0) {
-      console.warn("⚠️ No hay cartas para mostrar.");
-      return;
-    }
-  
-    const numberOfCards = 12;
-    const startAngle = -40; // Ángulo inicial para el abanico
+
+    const startAngle = -45;
     const angleStep = 90 / (numberOfCards - 1);
-    const isMobile = window.innerWidth <= 768;
-    const radius = isMobile ? 140 : 240; // Radio más pequeño para móviles
-    const centerX = window.innerWidth / 2.0;
-    const centerY = window.innerHeight / (isMobile ? 2.2 : 1.45) + 20;
-  
+    const cardDims = this.getCardDimensions();
+
+    this.timeline = gsap.timeline({
+      onComplete: () => {
+        // HABILITAR EVENTOS CUANDO TERMINE LA ANIMACIÓN
+        this.isInitialAnimationComplete = true;
+        this.cardElements.forEach((card) => {
+          card.style.pointerEvents = 'auto';
+        });
+      },
+    });
+
     for (let i = 0; i < numberOfCards; i++) {
       const cardData = this.cards[i];
-  
-      if (cardData && cardData.src) {
-        const angle = startAngle + (i * angleStep);
-        const radian = angle * (Math.PI / 180);
-  
-        const card = document.createElement("div");
-        card.classList.add("card");
-        card.style.position = "absolute";
-        card.style.width = isMobile ? "120px" : "150px"; // Tamaño adaptable
-        card.style.height = isMobile ? "200px" : "245px"; // Ajusta la altura aquí
-        card.style.border = "1px solid #ccc";
-        card.style.borderRadius = "10px";
-        card.style.left = `${centerX + radius * Math.sin(radian) - (isMobile ? 40 : 95)}px`;
-        card.style.top = `${centerY - radius * Math.cos(radian) - (isMobile ? 100 : 125)}px`; // Ajusta la posición vertical aquí
-        card.style.opacity = "0";
-        card.style.zIndex = `${i}`;
-        card.style.transform = `rotate(${angle}deg)`;
-        card.style.backgroundImage = "url('/card-back.webp')";
-        card.style.backgroundSize = "cover";
-        card.style.transition = "all 0.5s ease-in-out";
-  
-        // Agregar atributos de datos
-        card.dataset['src'] = cardData.src;
-        card.dataset['name'] = cardData.name;
-        card.dataset['descriptions'] = cardData.descriptions.join('.,');
-  
-        // Eventos de hover y clic
-        card.addEventListener("mouseenter", () => {
-          card.style.boxShadow = "0 0 8px rgba(255, 215, 0, 0.8), 0 0 15px rgba(255, 215, 0, 0.6)";
-        });
-  
-        card.addEventListener("mouseleave", () => {
-          card.style.boxShadow = "0 4px 15px rgba(0, 0, 0, 0.2)";
-        });
-  
-        card.addEventListener("click", this.selectCard.bind(this));
-        cardContainer.appendChild(card);
-  
-        // Animación de aparición
-        setTimeout(() => {
-          card.style.opacity = "1";
-        }, i * 100);
-      } else {
-        console.error(`⚠️ La carta en el índice ${i} no tiene datos válidos.`);
-      }
+      if (!cardData || !cardData.src) continue;
+
+      const card = this.createCard(cardData, i);
+      cardContainer.appendChild(card);
+      this.cardElements.push(card);
+
+      const angle = startAngle + i * angleStep;
+      const radian = angle * (Math.PI / 180);
+      const finalX = centerX + radius * Math.sin(radian) - cardDims.width / 2;
+      const finalY = centerY - radius * Math.cos(radian) - cardDims.height / 2;
+
+      gsap.set(card, {
+        left: centerX - cardDims.width / 2,
+        top: -200,
+        rotation: 0,
+        scale: 0,
+        opacity: 0,
+      });
+
+      this.timeline.to(
+        card,
+        {
+          left: finalX,
+          top: finalY,
+          rotation: angle,
+          scale: 1,
+          opacity: 1,
+          duration: 0.3,
+          ease: 'back.out(1.2)',
+          delay: i * 0.03,
+        },
+        `-=${i === 0 ? 0 : 0.25}`
+      );
+
+      card.style.zIndex = String(i + 10);
+    }
+
+    // Actualizar los tamaños de los slots dinámicamente
+    this.updateSlotSizes();
+  }
+
+  private updateSlotSizes(): void {
+    const slotDims = this.getSlotDimensions();
+    const slots = document.querySelectorAll('.card-slot');
+
+    slots.forEach((slot: Element) => {
+      const htmlSlot = slot as HTMLElement;
+      htmlSlot.style.width = `${slotDims.width}px`;
+      htmlSlot.style.height = `${slotDims.height}px`;
+    });
+  }
+
+  private createCard(cardData: any, index: number): HTMLElement {
+    const card = document.createElement('div');
+    const cardDims = this.getCardDimensions();
+
+    card.classList.add('card');
+    card.style.position = 'absolute';
+    card.style.width = `${cardDims.width}px`;
+    card.style.height = `${cardDims.height}px`;
+    card.style.borderRadius = '10px';
+    card.style.backgroundImage = "url('/card-back.webp')";
+    card.style.backgroundSize = 'cover';
+    card.style.backgroundPosition = 'center';
+
+    // DESHABILITAR EVENTOS INICIALMENTE
+    card.style.pointerEvents = 'none';
+
+    card.dataset['src'] = cardData.src;
+    card.dataset['name'] = cardData.name;
+    card.dataset['descriptions'] = cardData.descriptions.join('.,');
+    card.dataset['index'] = String(index);
+    card.dataset['originalIndex'] = String(index);
+
+    card.addEventListener('click', () => this.selectCard(card));
+
+    return card;
+  }
+
+  private selectCard(card: HTMLElement): void {
+    if (
+      this.selectedCards.length >= 3 ||
+      card.classList.contains('selected') ||
+      this.isAnimating
+    ) {
+      return;
+    }
+
+    this.isAnimating = true;
+    card.classList.add('selected');
+
+    const selectedIndex = this.selectedCards.length;
+    const slot = document.getElementById(`slot-${selectedIndex}`);
+
+    if (!slot) {
+      this.isAnimating = false;
+      return;
+    }
+
+    slot.classList.add('filled');
+
+    // Obtener las dimensiones actuales
+    const cardInSlotDims = this.getCardInSlotDimensions();
+    const slotRect = slot.getBoundingClientRect();
+    const containerRect = document
+      .getElementById('cardContainer')
+      ?.getBoundingClientRect();
+
+    if (!containerRect) {
+      this.isAnimating = false;
+      return;
+    }
+
+    // Calcular la posición final relativa al contenedor
+    const targetX =
+      slotRect.left +
+      slotRect.width / 2 -
+      containerRect.left -
+      cardInSlotDims.width / 2;
+    const targetY =
+      slotRect.top +
+      slotRect.height / 2 -
+      containerRect.top -
+      cardInSlotDims.height / 2 +
+      10;
+
+    const selectTimeline = gsap.timeline({
+      onComplete: () => {
+        this.isAnimating = false;
+        this.checkCompletion();
+      },
+    });
+
+    // Guardar la posición actual para calcular el scale correcto
+    const currentWidth = parseFloat(card.style.width);
+    const scaleRatio = cardInSlotDims.width / currentWidth;
+
+    selectTimeline
+      .to(card, {
+        scale: 1.3,
+        zIndex: 1000 + selectedIndex,
+        duration: 0.3,
+        ease: 'power2.out',
+      })
+      .to(card, {
+        rotationY: 90,
+        duration: 0.25,
+        ease: 'power2.in',
+        onComplete: () => {
+          card.style.backgroundImage = `url('${card.dataset['src']}')`;
+        },
+      })
+      .to(card, {
+        rotationY: 180,
+        duration: 0.25,
+        ease: 'power2.out',
+      })
+      .to(card, {
+        left: targetX,
+        top: targetY,
+        scale: scaleRatio,
+        rotation: 0,
+        width: cardInSlotDims.width,
+        height: cardInSlotDims.height,
+        duration: 0.5,
+        ease: 'power3.inOut',
+      });
+
+    this.addSlotGlow(slot);
+
+    this.selectedCards.push({
+      src: card.dataset['src'] || '',
+      name: card.dataset['name'] || '',
+      descriptions: card.dataset['descriptions']?.split('.,') || [],
+    });
+
+    this.updateCounter();
+
+    if ('vibrate' in navigator) {
+      navigator.vibrate(50);
     }
   }
-  /**
-   * Maneja la selección de una carta y su animación en la interfaz.
-   * 
-   * Este método permite a los usuarios seleccionar hasta tres cartas. Al seleccionar una carta:
-   * - Se actualiza su posición y estilo para resaltar su selección.
-   * - Se aplica una animación de giro y escalado.
-   * - Se almacena la información de la carta seleccionada.
-   * - Cuando se seleccionan tres cartas, se ajusta su posición y se inicia la transición a la siguiente vista.
-   * 
-   * @param {Event} event - Evento de clic en la carta seleccionada.
-   */
-  selectCard(event: Event): void {
-    const target = event.target as HTMLElement;
-    if (this.selectedCards.length >= 3 || target.classList.contains("selected")) return;
-  
-    // Actualizar z-index para mostrar la última carta encima
-    const currentZIndex = 1500 + this.selectedCards.length;
-    target.style.zIndex = currentZIndex.toString();
-  
-    target.classList.add("selected");
-    target.style.transition = "all 1.5s cubic-bezier(0.68, -0.55, 0.265, 1.55)";
-  
-    // Posicionamiento responsive
-    const isMobile = window.innerWidth <= 768;
-    const centerX = window.innerWidth / 1.6;
-    const centerY = window.innerHeight / 4.25 + (isMobile ? 125 : 150);
-    const cardSpacing = isMobile ? 40 : 100; // Menor espacio entre cartas en móvil
-  
-    // Calcular nueva posición basada en cantidad de seleccionadas
-    const offsetX = (this.selectedCards.length - 1) * cardSpacing - cardSpacing;
-  
-    target.style.left = `${centerX - (isMobile ? 40 : 125) + offsetX}px`;
-    target.style.top = `${centerY - (isMobile ? 40 : 125)}px`;
-    target.style.transform = `scale(${isMobile ? 1.1 : 1.2}) rotateY(180deg)`;
-  
-    this.selectedCards.push({
-      src: target.dataset['src'] || '',
-      name: target.dataset['name'] || '',
-      descriptions: target.dataset['descriptions']?.split('.,') || [],
+
+  private addSlotGlow(slot: HTMLElement): void {
+    const glow = document.createElement('div');
+    glow.style.position = 'absolute';
+    glow.style.width = '100%';
+    glow.style.height = '100%';
+    glow.style.top = '0';
+    glow.style.left = '0';
+    glow.style.borderRadius = '10px';
+    glow.style.background =
+      'radial-gradient(circle, rgba(255, 215, 0, 0.5), transparent)';
+    glow.style.pointerEvents = 'none';
+    slot.appendChild(glow);
+
+    gsap.from(glow, {
+      scale: 0,
+      opacity: 0,
+      duration: 0.5,
+      ease: 'power2.out',
     });
-  
-    setTimeout(() => {
-      target.style.backgroundImage = `url('${target.dataset['src']}')`;
-      target.style.pointerEvents = "none";
-    }, 300);
-  
+
+    gsap.to(glow, {
+      opacity: 0,
+      duration: 0.5,
+      delay: 1,
+      onComplete: () => glow.remove(),
+    });
+  }
+
+  private updateCounter(): void {
+    const counter = document.querySelector('.counter');
+    if (!counter) return;
+
+    gsap.to(counter, {
+      scale: 1.2,
+      duration: 0.2,
+      ease: 'power2.out',
+      onComplete: () => {
+        counter.textContent = `${this.selectedCards.length}/3`;
+        gsap.to(counter, {
+          scale: 1,
+          duration: 0.2,
+          ease: 'power2.out',
+        });
+      },
+    });
+  }
+
+  private checkCompletion(): void {
     if (this.selectedCards.length === 3) {
-      this.ajustarPosicionFinal(isMobile);
       setTimeout(() => {
-        this.cardService.setSelectedCards(this.selectedCards);
-        this.fadeOutAndNavigate();
+        this.completeSelection();
       }, 1500);
     }
   }
-  /**
- * Ajusta la posición final de las cartas seleccionadas para alinearlas correctamente en la interfaz.
- * 
- * @param {boolean} isMobile - Indica si el usuario está en un dispositivo móvil.
- */
-  private ajustarPosicionFinal(isMobile: boolean): void {
-    const selectedCards = document.getElementsByClassName('selected');
-    const cardWidth = isMobile ? 80 : 150;
-    const spacing = isMobile ? 20 : 60;
-    const totalWidth = (cardWidth * 3) + (2 * spacing);
-    const startX = isMobile ? (window.innerWidth - totalWidth) / 1.65 : (window.innerWidth - totalWidth) / 2;
-  
-    // Ajuste clave: Posición vertical para escritorio (parte inferior)
-    let centerY = isMobile ? window.innerHeight * 0.1 : window.innerHeight * 0.9 - 600;
-  
-    Array.from(selectedCards).forEach((card: Element, index: number) => {
+
+  private completeSelection(): void {
+    this.cardService.setSelectedCards(this.selectedCards);
+
+    const overlay = document.getElementById('transitionOverlay');
+    if (!overlay) {
+      this.router.navigate(['/descripcion-cartas']);
+      return;
+    }
+
+    const finalTimeline = gsap.timeline();
+
+    // Primero desvanecer las cartas no seleccionadas
+    const unselectedCards = document.querySelectorAll('.card:not(.selected)');
+    finalTimeline.to(unselectedCards, {
+      opacity: 0,
+      scale: 0.8,
+      y: 50,
+      stagger: 0.02,
+      duration: 0.5,
+      ease: 'power2.in',
+    });
+
+    // NUEVA ANIMACIÓN MEJORADA PARA CARTAS SELECCIONADAS
+    const selectedCards = document.querySelectorAll('.card.selected');
+    const centerX = window.innerWidth / 2;
+    const centerY = window.innerHeight / 2;
+
+    // Calcular dimensiones finales más grandes para el centro
+    const finalCardWidth = Math.min(120, window.innerWidth * 0.08);
+    const finalCardHeight = finalCardWidth * 1.4;
+    const cardSpacing = finalCardWidth + 20; // Espacio entre cartas
+
+    // Mover cartas al centro de la pantalla en línea horizontal
+    selectedCards.forEach((card, index) => {
       const htmlCard = card as HTMLElement;
-      htmlCard.style.transition = 'all 1.5s ease';
-      htmlCard.style.left = `${startX + (index * (cardWidth + spacing))}px`;
-      htmlCard.style.top = `${centerY}px`;
-      htmlCard.style.transform = `scale(${isMobile ? 1 : 1.2}) rotateY(180deg)`;
+
+      finalTimeline.to(
+        htmlCard,
+        {
+          left:
+            centerX - cardSpacing + index * cardSpacing - finalCardWidth / 2,
+          top: centerY - finalCardHeight / 2 - 50, // Un poco más arriba del centro
+          width: finalCardWidth,
+          height: finalCardHeight,
+          scale: 1,
+          rotation: 0, // Sin rotación para mejor visibilidad
+          zIndex: 2000 + index,
+          duration: 1.2,
+          ease: 'power3.inOut',
+        },
+        index === 0 ? '-=0.2' : '-=0.8'
+      );
+    });
+
+    // Añadir brillo dorado
+    finalTimeline.to('.card.selected', {
+      boxShadow:
+        '0 0 50px rgba(255, 215, 0, 0.9), 0 0 100px rgba(255, 215, 0, 0.5)',
+      duration: 1.5,
+    });
+
+    // Pausa para que el usuario vea las cartas
+    finalTimeline.to({}, { duration: 1.5 });
+
+    // Activar overlay de transición
+    finalTimeline.to(overlay, {
+      opacity: 1,
+      duration: 0.8,
+      ease: 'power2.inOut',
+    });
+
+    // Animación final de salida hacia arriba
+    finalTimeline.to('.card.selected', {
+      y: '-=200', // Mover hacia arriba
+      scale: 0.8,
+      opacity: 0.8,
+      stagger: 0.1,
+      duration: 0.6,
+      ease: 'power2.in',
+    });
+
+    // Desvanecimiento final
+    finalTimeline.to('.card.selected', {
+      opacity: 0,
+      scale: 0,
+      stagger: 0.05,
+      duration: 0.4,
+      ease: 'power2.in',
+    });
+
+    finalTimeline.call(() => {
+      this.router.navigate(['/descripcion-cartas']);
     });
   }
-  /**
- * Aplica un efecto de desaparición al contenedor de cartas y navega a la siguiente vista.
- */
-  private fadeOutAndNavigate(): void {
-    const cardContainer = document.getElementById("cardContainer");
-    if (cardContainer) {
-      cardContainer.classList.add('fade-out');
-      cardContainer.addEventListener('animationend', () => {
-        this.router.navigate(['/descripcion-cartas']);
+  private resetSelection(): void {
+    if (this.isAnimating) return;
+
+    this.selectedCards = [];
+    this.updateCounter();
+
+    const slots = document.querySelectorAll('.card-slot');
+    slots.forEach((slot) => {
+      slot.classList.remove('filled');
+    });
+
+    const selectedCards = document.querySelectorAll('.card.selected');
+    selectedCards.forEach((card: Element) => {
+      const htmlCard = card as HTMLElement;
+      const originalIndex = parseInt(htmlCard.dataset['originalIndex'] || '0');
+
+      htmlCard.classList.remove('selected');
+      htmlCard.style.backgroundImage = "url('/card-back.webp')";
+
+      this.returnCardToOriginalPosition(htmlCard, originalIndex);
+    });
+
+    this.isAnimating = false;
+  }
+
+  private returnCardToOriginalPosition(card: HTMLElement, index: number): void {
+    const numberOfCards = 12;
+    const viewportWidth = window.innerWidth;
+    const viewportHeight = window.innerHeight;
+    const centerX = viewportWidth / 2;
+    const centerY = viewportHeight * 0.38;
+    const cardDims = this.getCardDimensions();
+
+    let radius;
+    if (viewportWidth <= 480) {
+      radius = Math.min(viewportWidth * 0.35, 140);
+    } else if (viewportWidth <= 768) {
+      radius = Math.min(viewportWidth * 0.32, 180);
+    } else if (viewportWidth <= 1366) {
+      radius = Math.min(viewportWidth * 0.18, 220);
+    } else {
+      radius = Math.min(viewportWidth * 0.15, 250);
+    }
+
+    const startAngle = -45;
+    const angleStep = 90 / (numberOfCards - 1);
+    const angle = startAngle + index * angleStep;
+    const radian = angle * (Math.PI / 180);
+    const finalX = centerX + radius * Math.sin(radian) - cardDims.width / 2;
+    const finalY = centerY - radius * Math.cos(radian) - cardDims.height / 2;
+
+    gsap.to(card, {
+      left: finalX,
+      top: finalY,
+      width: cardDims.width,
+      height: cardDims.height,
+      rotation: angle,
+      rotationY: 0,
+      scale: 1,
+      zIndex: index + 10,
+      duration: 0.6,
+      ease: 'power3.inOut',
+      onComplete: () => {
+        card.style.pointerEvents = 'auto';
+      },
+    });
+  }
+
+  private handleResize = (): void => {
+    // Actualizar dimensiones de slots
+    this.updateSlotSizes();
+
+    if (this.cardElements.length > 0 && !this.isAnimating) {
+      const viewportWidth = window.innerWidth;
+      const viewportHeight = window.innerHeight;
+      const centerX = viewportWidth / 2;
+      const centerY = viewportHeight * 0.38;
+      const cardDims = this.getCardDimensions();
+
+      let radius;
+      if (viewportWidth <= 480) {
+        radius = Math.min(viewportWidth * 0.35, 140);
+      } else if (viewportWidth <= 768) {
+        radius = Math.min(viewportWidth * 0.32, 180);
+      } else if (viewportWidth <= 1366) {
+        radius = Math.min(viewportWidth * 0.18, 220);
+      } else {
+        radius = Math.min(viewportWidth * 0.15, 250);
+      }
+
+      const startAngle = -45;
+      const angleStep = 90 / (this.cardElements.length - 1);
+
+      this.cardElements.forEach((card, i) => {
+        if (!card.classList.contains('selected')) {
+          const angle = startAngle + i * angleStep;
+          const radian = angle * (Math.PI / 180);
+          const finalX =
+            centerX + radius * Math.sin(radian) - cardDims.width / 2;
+          const finalY =
+            centerY - radius * Math.cos(radian) - cardDims.height / 2;
+
+          gsap.to(card, {
+            left: finalX,
+            top: finalY,
+            width: cardDims.width,
+            height: cardDims.height,
+            rotation: angle,
+            duration: 0.3,
+            ease: 'power2.inOut',
+          });
+        }
+      });
+
+      // Actualizar posiciones de cartas seleccionadas
+      const selectedCards = document.querySelectorAll('.card.selected');
+      selectedCards.forEach((card: Element, index) => {
+        const htmlCard = card as HTMLElement;
+        const slot = document.getElementById(`slot-${index}`);
+        if (slot) {
+          const slotRect = slot.getBoundingClientRect();
+          const containerRect = document
+            .getElementById('cardContainer')
+            ?.getBoundingClientRect();
+          const cardInSlotDims = this.getCardInSlotDimensions();
+
+          if (containerRect) {
+            const targetX =
+              slotRect.left +
+              slotRect.width / 2 -
+              containerRect.left -
+              cardInSlotDims.width / 2;
+            const targetY =
+              slotRect.top +
+              slotRect.height / 2 -
+              containerRect.top -
+              cardInSlotDims.height / 2 +
+              10;
+
+            gsap.to(htmlCard, {
+              left: targetX,
+              top: targetY,
+              width: cardInSlotDims.width,
+              height: cardInSlotDims.height,
+              duration: 0.3,
+            });
+          }
+        }
       });
     }
+  };
+
+  private setupHoverEffects(): void {
+    this.cardElements.forEach((card) => {
+      let hoverAnimation: gsap.core.Tween | null = null;
+
+      card.addEventListener('mouseenter', () => {
+        if (!card.classList.contains('selected') && !this.isAnimating) {
+          if (hoverAnimation) {
+            hoverAnimation.kill();
+          }
+
+          const originalZ = card.style.zIndex;
+          card.dataset['originalZ'] = originalZ;
+
+          hoverAnimation = gsap.to(card, {
+            scale: 1.05,
+            y: '-=10',
+            zIndex: 500,
+            duration: 0.3,
+            ease: 'power2.out',
+          });
+        }
+      });
+
+      card.addEventListener('mouseleave', () => {
+        if (!card.classList.contains('selected') && !this.isAnimating) {
+          if (hoverAnimation) {
+            hoverAnimation.kill();
+          }
+
+          const originalZ = card.dataset['originalZ'] || '10';
+
+          hoverAnimation = gsap.to(card, {
+            scale: 1,
+            y: '+=10',
+            zIndex: parseInt(originalZ),
+            duration: 0.3,
+            ease: 'power2.out',
+          });
+        }
+      });
+    });
+  }
+
+  private setupTouchSupport(): void {
+    if ('ontouchstart' in window) {
+      this.cardElements.forEach((card) => {
+        card.addEventListener('touchstart', (e) => {
+          e.preventDefault();
+          if (!card.classList.contains('selected') && !this.isAnimating) {
+            gsap.to(card, {
+              scale: 1.05,
+              duration: 0.2,
+            });
+          }
+        });
+
+        card.addEventListener('touchend', (e) => {
+          e.preventDefault();
+          if (!card.classList.contains('selected') && !this.isAnimating) {
+            gsap.to(card, {
+              scale: 1,
+              duration: 0.2,
+            });
+            this.selectCard(card);
+          }
+        });
+      });
+    }
+  }
+
+  ngAfterViewInit(): void {
+    this.animateHeader();
+
+    setTimeout(() => {
+      this.displayCards();
+
+      setTimeout(() => {
+        this.setupHoverEffects();
+        this.setupTouchSupport();
+      }, 800);
+    }, 400);
+
+    window.addEventListener('resize', this.handleResize);
+
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        this.resetSelection();
+      }
+    });
+  }
+
+  ngOnDestroy(): void {
+    if (this.timeline) {
+      this.timeline.kill();
+    }
+
+    this.cardElements.forEach((card) => {
+      gsap.killTweensOf(card);
+    });
+
+    window.removeEventListener('resize', this.handleResize);
+
+    const cardContainer = document.getElementById('cardContainer');
+    if (cardContainer) {
+      cardContainer.innerHTML = '';
+    }
+  }
+
+  public initialize(): void {
+    this.initializeCards();
+    this.setupTouchSupport();
+    document.body.classList.add('cards-page');
   }
 }

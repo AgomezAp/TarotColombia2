@@ -1,48 +1,62 @@
 import { Routes } from '@angular/router';
 
-import {
-  AdditionalInfoComponent,
-} from './components/additional-info/additional-info.component';
-import {
-  AgradecimientoComponent,
-} from './components/agradecimiento/agradecimiento.component';
-import { CardsComponent } from './components/cards/cards.component';
-import {
-  DescriptionComponent,
-} from './components/description/description.component';
-import {
-  TerminosCondicionesComponent,
-} from './components/terminos-condiciones/terminos-condiciones.component';
-import { WelcomeComponent } from './components/welcome/welcome.component';
-import { ParticlesComponent } from './shared/particles/particles.component';
-
 export const routes: Routes = [
   {
     path: '',
-    redirectTo: 'welcome',
+    redirectTo: 'bienvenida',
     pathMatch: 'full',
   },
-    {
-        path:'welcome', component: WelcomeComponent
-    },
-    {
-        path:'cartas/:theme', component:CardsComponent
-    },
-    {
-        path:'descripcion-cartas',component:DescriptionComponent
-    },
-    {
-        path:'informacion',component:AdditionalInfoComponent
-    },
-    {
-      path: 'particulas',component:ParticlesComponent
-    },
-    {
-      path:'agradecimiento',component:AgradecimientoComponent
-    },
-    {
-      path:'terminos-y-condiciones',component:TerminosCondicionesComponent
-    }
-
-
+  {
+    path: 'bienvenida',
+    loadComponent: () =>
+      import('./components/welcome/welcome.component').then(
+        (m) => m.WelcomeComponent
+      ),
+  },
+  {
+    path: 'cartas/:theme',
+    loadComponent: () =>
+      import('./components/cards/cards.component').then(
+        (m) => m.CardsComponent
+      ),
+  },
+  {
+    path: 'descripcion-cartas',
+    loadComponent: () =>
+      import('./components/description/description.component').then(
+        (m) => m.DescriptionComponent
+      ),
+  },
+  {
+    path: 'informacion',
+    loadComponent: () =>
+      import('./components/additional-info/additional-info.component').then(
+        (m) => m.AdditionalInfoComponent
+      ),
+  },
+  {
+    path: 'particulas',
+    loadComponent: () =>
+      import('./shared/particles/particles.component').then(
+        (m) => m.ParticlesComponent
+      ),
+  },
+  {
+    path: 'agradecimiento',
+    loadComponent: () =>
+      import('./components/agradecimiento/agradecimiento.component').then(
+        (m) => m.AgradecimientoComponent
+      ),
+  },
+  {
+    path: 'terminos-y-condiciones',
+    loadComponent: () =>
+      import(
+        './components/terminos-condiciones/terminos-condiciones.component'
+      ).then((m) => m.TerminosCondicionesComponent),
+  },
+  {
+    path: '**',
+    redirectTo: 'bienvenida',
+  }
 ];

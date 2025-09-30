@@ -1,81 +1,165 @@
+@import url("https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600&family=Cormorant+Garamond:wght@300;400;600&display=swap");
 
-.background {
-  background: url("/IMAGEN-ORIGEN-scaled-1.webp") no-repeat center center fixed;
-  background-size: cover;
-  background-position: center center;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  align-items: center;
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html,
+body {
+  width: 100%;
   height: 100vh;
-  margin-top: -8px;
-  margin-left: -17px;
-  margin-right:-17px;
-  margin-bottom: -9px;
   overflow: hidden;
-  z-index: 1;
+  position: fixed;
+  top: 0;
+  left: 0;
 }
-.content-container {
+
+/* Fondo simple pero elegante */
+.background {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: linear-gradient(
+      135deg,
+      rgba(10, 0, 21, 0.8),
+      rgba(46, 7, 63, 0.6)
+    ),
+    url("/IMAGEN-ORIGEN-scaled-1.webp") center center/cover no-repeat;
   display: flex;
-  font-family: Arial, sans-serif;
-  flex-direction: column;
   justify-content: center;
   align-items: center;
-  text-align: center;
-  width: 80%;
-  padding: 20px;
-  margin-top: 20px;
-  height: 80%;
-  border-radius: 10px;
   overflow: hidden;
-  z-index: 1;
 }
-.particulas{
+
+/* Partículas en el fondo - NO INTERFIEREN */
+.particles-background {
   position: absolute;
-  z-index: 1;
-  overflow: hidden;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 1; /* Muy bajo */
+  pointer-events: none !important; /* IMPORTANTE: No bloquea clics */
 }
 
+/* Contenedor principal con glassmorphism simple */
+.content-container {
+  background: linear-gradient(
+    135deg,
+    rgba(30, 20, 60, 0.9),
+    rgba(60, 40, 100, 0.8)
+  );
+  backdrop-filter: blur(20px);
+  border: 2px solid rgba(255, 215, 0, 0.3);
+  border-radius: 30px;
+  padding: 50px 40px;
+  width: 90%;
+  max-width: 700px;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5), 0 0 60px rgba(255, 215, 0, 0.1);
+  text-align: center;
+  position: relative;
+  z-index: 10; /* Por encima de las partículas */
+}
+
+/* Títulos elegantes y simples */
 h1 {
-  font-family: Arial, sans-serif;
-  color: #fff;
-  font-size: 1.8rem;
-  text-shadow: 0 1px 2px rgba(255, 255, 255, 0.6),
-    0 0 10px rgba(255, 215, 0, 0.5),
-    0 0 20px rgba(255, 215, 0, 0.4);
-  animation: goldenGlow 5s infinite;
+  font-family: "Cinzel", serif;
+  color: #ffd700;
+  font-size: clamp(1.5rem, 3.5vw, 2.2rem);
+  font-weight: 600;
+  margin-bottom: 25px;
+  line-height: 1.4;
+  text-shadow: 0 0 20px rgba(255, 215, 0, 0.5);
+  position: relative;
+  z-index: 11;
 }
 
-button {
-  background: linear-gradient(45deg, #ffdd44, #bb8800);
-  color: #fff;
+/* Contenedor del botón */
+.button-container {
+  margin-top: 40px;
+  position: relative;
+  z-index: 12; /* Más alto que todo */
+}
+
+/* Botón elegante y optimizado */
+.call-to-action {
+  background: linear-gradient(135deg, #ffd700, #ff8c00);
+  color: #1a0033;
   border: none;
-  padding: 15px 30px;
-  font-size: 1.5rem;
-  font-weight: bold;
-  border-radius: 8px;
+  padding: 18px 45px;
+  font-family: "Cinzel", serif;
+  font-size: clamp(1.1rem, 2.5vw, 1.4rem);
+  font-weight: 600;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  border-radius: 50px;
   cursor: pointer;
-  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.4), 0 0 8px rgba(255, 221, 68, 0.7);
-  transition: transform 0.3s ease, box-shadow 0.3s ease
-}
-button:hover {
-  transform: scale(1.15);
-  /* Agranda el botón ligeramente */
-  box-shadow:
-    0 4px 8px rgba(0, 0, 0, 0.4),
-    /* Sombra inicial */
-    0 0 25px rgba(203, 161, 53, 1);
-  /* Brillo dorado sutil */
+  transition: all 0.3s ease;
+  box-shadow: 0 10px 30px rgba(255, 165, 0, 0.4);
+  display: inline-block;
+  position: relative;
+  z-index: 100; /* Z-index muy alto para asegurar interacción */
+  pointer-events: auto !important; /* Forzar que sea clickeable */
 }
 
-button:active {
-  transform: scale(0.95);
-  /* Reduce ligeramente el tamaño */
-  box-shadow:
-    0 2px 4px rgba(0, 0, 0, 0.5),
-    /* Sombra reducida */
-    0 0 10px rgba(255, 255, 255, 0.6);
-  /* Brillo blanco reducido */
-  background: linear-gradient(45deg, #b68e4c, #8f6f2d);
-  /* Gradiente más oscuro para el efecto de clic */
+.call-to-action:hover {
+  transform: translateY(-3px) scale(1.05);
+  box-shadow: 0 15px 40px rgba(255, 165, 0, 0.6);
+  filter: brightness(1.1);
+}
+
+.call-to-action:active {
+  transform: translateY(-1px) scale(1.02);
+}
+
+.call-to-action:focus {
+  outline: 2px solid #ffd700;
+  outline-offset: 3px;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .content-container {
+    width: 95%;
+    padding: 35px 25px;
+  }
+
+  h1 {
+    font-size: 1.4rem;
+    margin-bottom: 20px;
+  }
+
+  .call-to-action {
+    padding: 15px 35px;
+    font-size: 1.1rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .content-container {
+    padding: 25px 20px;
+    border-radius: 20px;
+  }
+
+  h1 {
+    font-size: 1.2rem;
+  }
+
+  .call-to-action {
+    padding: 12px 25px;
+    font-size: 1rem;
+  }
+}
+
+/* Para usuarios que prefieren menos movimiento */
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.1s !important;
+  }
 }

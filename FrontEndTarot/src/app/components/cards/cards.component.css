@@ -1,126 +1,470 @@
+@import url("https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600&family=Quicksand:wght@300;400;600&display=swap");
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html,
+body {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  position: fixed;
+  top: 0;
+  left: 0;
+}
+.particles-js,
+app-particles {
+  position: fixed !important;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 2; /* Entre el fondo y el contenido */
+  pointer-events: none;
+}
+#particles-js {
+  position: fixed !important;
+  width: 100%;
+  height: 100%;
+  top: 0;
+  left: 0;
+  z-index: 2;
+  pointer-events: none;
+}
 .background {
   background: url("/IMAGEN-ORIGEN-scaled-1.webp") no-repeat center center fixed;
   background-size: cover;
   background-position: center center;
   display: flex;
   flex-direction: column;
-  justify-content: center;
+  justify-content: flex-start;
   align-items: center;
-  height: 100vh;
-  margin-top: -10px;
-    margin-left: -17px;
-    margin-right:-17px;
-    margin-bottom: -9px;
+  min-height: 100vh;
+  position: relative;
   overflow: hidden;
   z-index: 1;
 }
-h2 {
+
+.background::before {
+  content: "";
   position: absolute;
   top: 0;
-  left: 50%;
-  transform: translateX(-50%);
-  text-align: center;
-  margin-top: 40px;
-  font-size: 60px;
-  color: #ffffff;
-  text-shadow: 1px 1px 4px rgba(255, 215, 0, 0.6);
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(
+    180deg,
+    rgba(0, 0, 0, 0.3) 0%,
+    rgba(0, 0, 0, 0.1) 50%,
+    rgba(0, 0, 0, 0.3) 100%
+  );
+  z-index: -1;
 }
-.particulas{
+
+/* Estrellas flotantes sutiles */
+.floating-stars {
   position: absolute;
-  z-index: 1;
+  width: 100%;
+  height: 100%;
   overflow: hidden;
+  z-index: 2;
+  pointer-events: none;
 }
+
+.star {
+  position: absolute;
+  width: 2px;
+  height: 2px;
+  background: white;
+  border-radius: 50%;
+  animation: twinkle 3s infinite;
+  box-shadow: 0 0 6px rgba(255, 255, 255, 0.8);
+}
+
+.star:nth-child(1) {
+  top: 20%;
+  left: 20%;
+  animation-delay: 0s;
+}
+.star:nth-child(2) {
+  top: 40%;
+  left: 70%;
+  animation-delay: 1s;
+}
+.star:nth-child(3) {
+  top: 60%;
+  left: 30%;
+  animation-delay: 2s;
+}
+.star:nth-child(4) {
+  top: 30%;
+  left: 90%;
+  animation-delay: 1.5s;
+}
+.star:nth-child(5) {
+  top: 70%;
+  left: 60%;
+  animation-delay: 2.5s;
+}
+
+@keyframes twinkle {
+  0%,
+  100% {
+    opacity: 0;
+    transform: scale(0.5);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* Header mejorado - Reducido para dar más espacio */
+.header-container {
+  position: relative;
+  text-align: center;
+  margin-top: 20px;
+  z-index: 10; /* Por encima de partículas */
+  animation: fadeInDown 1s ease-out;
+}
+
+.main-title {
+  font-family: "Cinzel", serif;
+  font-size: clamp(36px, 6vw, 52px);
+  color: #ffffff;
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8), 0 0 30px rgba(255, 215, 0, 0.5);
+  margin-bottom: 8px;
+}
+
+.number-highlight {
+  color: #ffd700;
+  font-size: 1.2em;
+  display: inline-block;
+  animation: pulse 2s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.1);
+  }
+}
+
+.subtitle {
+  font-family: "Quicksand", sans-serif;
+  font-size: 16px;
+  color: #ffffff;
+  opacity: 0.9;
+  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
+  margin-bottom: 10px;
+}
+
+.card-counter {
+  font-family: "Quicksand", sans-serif;
+  font-size: 15px;
+  color: #ffd700;
+  padding: 6px 18px;
+  background: rgba(0, 0, 0, 0.5);
+  border-radius: 25px;
+  display: inline-block;
+  border: 1px solid rgba(255, 215, 0, 0.5);
+}
+
+.counter {
+  font-weight: bold;
+  font-size: 17px;
+}
+
+/* Contenedor principal - Ajustado para mejor centrado */
+.content-container {
+  width: 100%;
+  height: calc(100vh - 100px);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  position: relative;
+  z-index: 5;
+  margin-top: -20px; /* Sube todo el contenido */
+}
+
 .cartas-container {
+  position: relative;
+  width: 100%;
+  height: 50vh; /* Reducido para dar espacio a los slots */
   display: flex;
   justify-content: center;
   align-items: center;
-  height: 100vh;
-  margin-top: -10px;
-  margin-left: -10px;
-  margin-right: -10px;
-  margin-bottom: -10px;
-  overflow: hidden;
-  z-index: 1;
+  margin-bottom: 80px; /* Espacio entre cartas y slots */
 }
+
 .card-container {
   position: relative;
-  width: 100vw;
-  height: 60vh;
-  margin-top: 15vh;
+  width: 100%;
+  height: 100%;
 }
 
+/* Estilos de cartas */
 .card {
   position: absolute;
-  transition: all 0.5s ease-in-out;
+  width: 150px;
+  height: 245px;
+  border-radius: 10px;
+  border: 2px solid rgba(255, 215, 0, 0.3);
+  cursor: pointer;
+  transition: all 0.3s ease;
+  transform-origin: center center;
   backface-visibility: hidden;
-  transform-style: preserve-3d;
-  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.5);
 }
 
-.card.selected {
-  transform: scale(1.2) translateY(-50px) rotateY(180deg);
-  transition: transform 1s ease-in-out;
+.card:hover:not(.selected) {
+  transform: translateY(-10px) scale(1.05) !important;
+  box-shadow: rgba(0, 0, 0, 0.6), rgba(255, 215, 0, 0.6), rgba(255, 215, 0, 0.3) !important; /* TRIPLE GLOW */
+  border-color: rgba(255, 215, 0, 0.8) !important;
+  z-index: 100 !important;
+  /* AGREGAR TRANSICIÓN SUAVE */
+  transition: all 0.3s ease !important;
 }
-
-#cardContainer.show {
+.card:hover:not(.selected)::before {
+  content: "";
   position: absolute;
-  top: 50%;
-  height:1000px;
-  left: 60%;
-  transform: translate(-50%, -50%);
-  width: 60%;
-  height: auto;
+  background: linear-gradient(
+    45deg,
+    rgba(255, 215, 0, 0.1),
+    rgba(255, 215, 0, 0.3),
+    rgba(255, 215, 0, 0.1)
+  );
+  border-radius: 15px;
+  z-index: -1;
+  filter: blur(10px);
+  opacity: 0;
+  animation: glowPulse 2s ease-in-out infinite;
+}
+@keyframes glowPulse {
+  0%,
+  100% {
+    opacity: 0.3;
+    transform: scale(0.95);
+  }
+  50% {
+    opacity: 0.6;
+    transform: scale(1.05);
+  }
+}
+.card.selected {
+  pointer-events: none;
+  border-color: #ffd700;
+}
+
+/* Área de selección - Mejor posicionada */
+.selected-area {
+  position: fixed;
+  bottom: 8vh;
+  left: 50%;
+  transform: translateX(-50%);
   display: flex;
+  gap: clamp(30px, 5vw, 50px); /* Aumentado el gap para cartas más grandes */
+  z-index: 20;
+  opacity: 1;
+}
+
+.card-slot {
+  border: 2px dashed rgba(255, 215, 0, 0.4);
+  border-radius: 10px;
+  position: relative;
+  background: rgba(0, 0, 0, 0.3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s ease;
+  overflow: visible; /* Permitir que las cartas sobresalgan si es necesario */
+}
+
+.card-slot.filled {
+  border-color: #ffd700;
+  background: rgba(255, 215, 0, 0.1);
+  box-shadow: 0 0 20px rgba(255, 215, 0, 0.3);
+}
+
+.slot-label {
+  position: absolute;
+  bottom: -25px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-family: "Quicksand", sans-serif;
+  font-size: 14px;
+  color: #ffffff;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
+  white-space: nowrap;
+}
+
+/* Contenedor de carta dentro del slot */
+.card-slot .card {
+  position: absolute !important;
+  width: 100px !important;
+  height: 163px !important;
+  left: 50% !important;
+  top: 50% !important;
+  transform: translate(-50%, -50%) !important;
+}
+
+/* Overlay de transición */
+.transition-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.9);
+  display: flex;
+  flex-direction: column;
   justify-content: center;
   align-items: center;
-
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 1s ease;
+  z-index: 9999;
 }
-.card:hover {
-  transform: scale(1.05);
+
+.transition-overlay.active {
+  opacity: 1;
+  pointer-events: all;
 }
 
-.card.selected {
-  transform: scale(1.2) translateY(-50px) rotateY(180deg);
-  transition: transform 1s ease-in-out;
+.loading-spinner {
+  width: 60px;
+  height: 60px;
+  border: 3px solid rgba(255, 215, 0, 0.3);
+  border-top-color: #ffd700;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin-bottom: 20px;
 }
-@media (max-width: 768px) {
-  .card {
-    width: 70px !important;    /* Reducir tamaño */
-    height: 120px !important;
-    margin: -20px;           /* Evitar superposición */
-  }
 
-  #cardContainer {
-      position: relative; /* Contenedor padre para posicionamiento absoluto */
-      width: 110vw;
-      height: 80vh;
-      overflow: hidden;
-      margin-right: 20px;
-    }
-
-  /* Ajustes de posicionamiento del abanico */
-  .card {
-    transform-origin: bottom center !important;
-    margin: 0 -25px;
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
   }
 }
 
-/* Ajustes para pantallas muy pequeñas */
-@media (max-width: 480px) {
-  .card {
-    width: 85px !important;
-    height: 140px !important;
-  }
-}
-.fade-out {
-  animation: fadeOut 1s forwards;
+.transition-overlay p {
+  font-family: "Cinzel", serif;
+  font-size: 24px;
+  color: #ffd700;
 }
 
-@keyframes fadeOut {
+/* Animaciones */
+@keyframes fadeInDown {
   from {
-    opacity: 1;
+    opacity: 0;
+    transform: translateY(-30px);
   }
   to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes dealCard {
+  from {
     opacity: 0;
+    transform: translateY(-100px) rotate(0deg) scale(0);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) rotate(var(--rotation)) scale(1);
+  }
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .header-container {
+    margin-top: 15px;
+  }
+
+  .main-title {
+    font-size: 28px;
+  }
+
+  .content-container {
+    margin-top: -10px;
+  }
+
+  .cartas-container {
+    height: 45vh;
+    margin-bottom: 60px;
+  }
+
+  .card {
+    width: 100px !important;
+    height: 160px !important;
+  }
+
+  .card-slot {
+    width: 80px;
+    height: 120px;
+  }
+
+  .card-slot .card {
+    width: 70px !important;
+    height: 112px !important;
+  }
+
+  .selected-area {
+    gap: 20px;
+    bottom: 40px;
+  }
+
+  .slot-label {
+    font-size: 12px;
+  }
+  .header-container {
+    margin-top: 15px;
+  }
+
+  .main-title {
+    font-size: 28px;
+  }
+
+  .content-container {
+    margin-top: -10px;
+  }
+
+  .cartas-container {
+    height: 45vh;
+    margin-bottom: 60px;
+  }
+
+  .card {
+    width: 100px !important;
+    height: 160px !important;
+  }
+
+  .card-slot {
+    width: 80px;
+    height: 120px;
+  }
+
+  .card-slot .card {
+    width: 70px !important;
+    height: 112px !important;
+  }
+
+  .selected-area {
+    gap: 20px;
+    bottom: 40px;
+  }
+
+  .slot-label {
+    font-size: 12px;
   }
 }
